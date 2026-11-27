@@ -14,6 +14,45 @@ news:[["Pobeda u derbiju","Radnički savladao rivala pred rasprodatim Čairom i 
 let D,cart=0,page="pocetna",mo=[2026,9],adm="players",ed=null,sel={},done="",tk=0;
 try{D=JSON.parse(localStorage.getItem("kkr"))}catch(e){}D=D||seed();
 const save=()=>{try{localStorage.setItem("kkr",JSON.stringify(D))}catch(e){}};
+/* NALOG, ČUVANJE PODATAKA I PROVERA FORMI: nalozi, porudžbine, ulaznice i prijave se čuvaju u pregledaču (localStorage) i ostaju posle osvežavanja */
+let A;try{A=JSON.parse(localStorage.getItem("kkr_a"))}catch(e){}A=A||{};["users","orders","tickets","enroll"].forEach(k=>A[k]=A[k]||[]);
+const saveA=()=>{try{localStorage.setItem("kkr_a",JSON.stringify(A))}catch(e){}};
+const ADM="adminadmin@gmail.com",hs=s=>{let h=5381;for(const c of s)h=(h*33^c.charCodeAt(0))>>>0;return"h"+h};
+const em=()=>{try{return localStorage.getItem("kkr_u")||""}catch(e){return""}};
+const me=()=>{const e=em();if(!e)return null;if(e==ADM)return{admin:1,ime:"Admin",prezime:"",email:ADM,tel:""};return A.users.find(u=>u.email==e)||null};
+const isAdmin=()=>!!(me()&&me().admin),mine=o=>o.user==em();
+const pre=k=>{const u=me();return u&&u[k]?esc(u[k]):""};
+const fd=d=>new Date(d).toLocaleString("sr-Latn-RS");
+const okW=w=>/^\p{L}{2,30}$/u.test(w)&&!/(\p{L})\1\1/iu.test(w)&&!/asdf|qwer|zxcv|sdfg|xxx|test/i.test(w)&&/[aeiouаеиоуrр]/i.test(w)&&!/[^aeiouаеиоуrр]{4,}/i.test(w);
+const okName=s=>{const t=s.trim();return/^\p{L}+([ '’-]\p{L}+)?$/u.test(t)&&t.split(/[ '’-]/).every(okW)};
+const okFull=s=>{const p=s.trim().split(/\s+/);return p.length>1&&p.length<5&&p.every(w=>w.split(/['’-]/).every(okW))};
+const okEmail=s=>{const t=s.trim();return/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(t)&&!/\.\./.test(t)};
+const okTel=s=>/^(\+381|0)[1-9]\d{7,9}$/.test(s.replace(/[\s\-\/()]/g,""));
+const okAdr=s=>{const t=s.trim();return t.length>=5&&/\p{L}{2}/u.test(t)};
+const okGrad=s=>/^\p{L}[\p{L} .'-]*[ ,]+\d{5}$/u.test(s.trim());
+const okCard=s=>{const d=s.replace(/[\s-]/g,"");if(!/^\d{16}$/.test(d))return 0;let t=0;for(let i=0;i<16;i++){let n=+d[15-i];if(i%2){n*=2;if(n>9)n-=9}t+=n}return t%10==0};
+const okExp=s=>{const m=s.trim().match(/^(0[1-9]|1[0-2])\/?(\d{2})$/);if(!m)return 0;const y=2000+ +m[2],mo=+m[1],n=new Date();return y>n.getFullYear()||(y==n.getFullYear()&&mo>=n.getMonth()+1)};
+const claim=e=>{["orders","tickets","enroll"].forEach(k=>A[k].forEach(o=>{if(!o.user&&o.email==e)o.user=e}));saveA()};
+const cap=s=>s.trim().replace(/(^|[ '’-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+function showEr(el,msg){const d=document.createElement("div");d.className="er";d.textContent=msg;el.insertAdjacentElement("afterend",d)}
+function chk(f,rules){let ok=1;f.querySelectorAll(".er").forEach(x=>x.remove());for(const r of rules){const el=f.elements[r[0]];if(el&&!r[1](el.value)){ok=0;showEr(el,r[2])}}return ok}
+const mN=["Unesite ispravno ime (samo slova, najmanje 2)","Unesite ispravno prezime (samo slova, najmanje 2)"],mE="Unesite ispravnu email adresu (npr. ime@gmail.com)",mT="Unesite ispravan broj telefona (npr. 0641234567 ili +381641234567)";
+const V=(f,n)=>f.elements[n].value.trim();
+const FORMS={
+up(f){if(!chk(f,[["n",okName,mN[0]],["p",okName,mN[1]],["t",okTel,mT],["g",s=>/^\d{1,2}$/.test(s.trim())&&+s>=5&&+s<=18,"Godine: broj od 5 do 18"],["e",okEmail,mE]]))return;
+A.enroll.push({user:em(),ime:cap(V(f,"n")),prezime:cap(V(f,"p")),tel:V(f,"t"),godine:V(f,"g"),email:V(f,"e").toLowerCase(),date:new Date().toISOString()});saveA();done="up";render()},
+kup(f){if(!chk(f,[["n",okFull,"Unesite ispravno ime i prezime (npr. Marko Jovanović)"],["e",okEmail,mE],["t",okTel,mT],["a",okAdr,"Unesite ispravnu adresu (ulica i broj)"],["g",okGrad,"Unesite grad i poštanski broj od 5 cifara (npr. Niš, 18000)"]].concat(f.elements.pl.value=="Kartica"?[["cn",okCard,"Unesite ispravan broj kartice (16 cifara)"],["cm",okFull,"Unesite ime kao što piše na kartici"],["ce",okExp,"Unesite važeći datum isteka (MM/GG)"],["cc",s=>/^\d{3,4}$/.test(s.trim()),"CVV ima 3 ili 4 cifre"]]:[])))return;
+const i=f.dataset.i,p=D.products[i];if(!p||!p.stock)return;const sz=sel[i]||p.sizes.split(",")[0];
+A.orders.push({user:em(),proizvod:p.name,velicina:sz,cena:p.price,placanje:f.elements.pl.value,kartica:f.elements.pl.value=="Kartica"?f.elements.cn.value.replace(/\D/g,"").slice(-4):"",ime:cap(V(f,"n")),email:V(f,"e").toLowerCase(),tel:V(f,"t"),adresa:V(f,"a"),grad:cap(V(f,"g")),date:new Date().toISOString()});
+p.stock--;save();saveA();done="kup";render()},
+tk(f){if(!chk(f,[["n",okName,mN[0]],["p",okName,mN[1]],["e",okEmail,mE],["t",okTel,mT],["q",s=>/^\d{1,2}$/.test(s.trim())&&+s>=1&&+s<=10,"Broj ulaznica: od 1 do 10"]]))return;
+const q=+V(f,"q");A.tickets.push({user:em(),utakmica:f.elements.m.value,qty:q,total:q*500,ime:cap(V(f,"n")),prezime:cap(V(f,"p")),email:V(f,"e").toLowerCase(),tel:V(f,"t"),date:new Date().toISOString()});saveA();done="tk";render()},
+sign(f){if(!chk(f,[["n",okName,mN[0]],["p",okName,mN[1]],["e",okEmail,mE],["t",okTel,mT],["l",s=>s.length>=6,"Lozinka mora imati najmanje 6 znakova"],["l2",s=>s.length>0&&s==f.elements.l.value,"Lozinke se ne poklapaju"]]))return;
+const e=V(f,"e").toLowerCase();if(e==ADM||A.users.some(u=>u.email==e)){showEr(f.elements.e,"Nalog sa ovim emailom već postoji");return}
+A.users.push({ime:cap(V(f,"n")),prezime:cap(V(f,"p")),email:e,tel:V(f,"t"),pass:hs(f.elements.l.value)});claim(e);try{localStorage.setItem("kkr_u",e)}catch(x){}render()},
+login(f){if(!chk(f,[["e",okEmail,mE],["l",s=>s.length>0,"Unesite lozinku"]]))return;
+const e=V(f,"e").toLowerCase(),l=f.elements.l.value;
+if((e==ADM&&l=="admin")||A.users.some(u=>u.email==e&&u.pass==hs(l))){claim(e);try{localStorage.setItem("kkr_u",e)}catch(x){}render()}else showEr(f.elements.l,"Pogrešan email ili lozinka")}};
 /* POMOĆNE FUNKCIJE: logo, ilustracije hale/igrača/novosti, datumi, sledeća utakmica */
 const LG=s=>`<svg width="${s}" height="${s}" viewBox="0 0 40 40" fill="none" stroke="#FF4D4D" stroke-width="2.4"><circle cx="20" cy="20" r="15"/><path d="M5 20h30M20 5v30M9 9c8 6 8 16 0 22M31 9c-8 6-8 16 0 22"/></svg>`;
 const sv=b=>`<svg viewBox="0 0 300 170" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">${b}</svg>`;
@@ -28,26 +67,26 @@ const dt=(m,o)=>new Date(m.d+"T19:30").toLocaleDateString("sr-Latn-RS",o||{weekd
 const ini=n=>n.split(" ").map(x=>x[0]).join("");
 const nextM=()=>D.matches.find(m=>new Date(m.d+"T19:30")>new Date())||D.matches[D.matches.length-1];
 /* PRIKAZ UTAKMICE: logoi klubova, pozicija u ligi, ikonica domaćin/gost */
-const mrow=m=>`<div class="mr"><span>${dt(m)} • 19:30</span><div class="tm">${m.h?LG(30)+" Radnički":bg(m.o)+" "+m.o}</div><b>VS</b><div class="tm">${m.h?bg(m.o)+" "+m.o:LG(30)+" Radnički"}</div><span class="pos">${m.pos}</span><span class="ha ${m.h?"h":"a"}">${m.h?"🏠 Domaćin":"🚌 Gost"}</span></div>`;
+const mrow=m=>`<div class="mr" data-go="utakmica-${D.matches.indexOf(m)}" style="cursor:pointer"><span>${dt(m)} • 19:30</span><div class="tm">${m.h?LG(30)+" Radnički":bg(m.o)+" "+m.o}</div><b>VS</b><div class="tm">${m.h?bg(m.o)+" "+m.o:LG(30)+" Radnički"}</div><span class="pos">${m.pos}</span><span class="ha ${m.h?"h":"a"}">${m.h?"🏠 Domaćin":"🚌 Gost"}</span></div>`;
 /* NAVBAR: Početna, Škola košarke, Lista igrača, Lista trenera, Kalendar utakmica, Shop + dugme Kupi ulaznice, korpa, admin */
 const links=[["pocetna","Početna"],["skola","Škola košarke"],["igraci","Lista igrača"],["treneri","Lista trenera"],["kalendar","Kalendar utakmica"],["shop","Shop"]];
 const tpg=()=>page.split("-")[0];
-function nav(){const t=tpg(),t2={igrac:"igraci",trener:"treneri",artikal:"shop",vest:"pocetna"}[t]||t;
-$("#nv").innerHTML=`<div class="lg" data-go="pocetna">${LG(40)}<div>RADNIČKI<small>NIŠ • 1945</small></div></div><div class="l">${links.map(l=>`<a data-go="${l[0]}" class="${t2==l[0]?"on":""}">${l[1]}</a>`).join("")}</div><button class="btn" data-tk="1">Kupi ulaznice</button><button class="ic" data-go="shop" title="Korpa">🛍${cart?`<i>${cart}</i>`:""}</button><button class="ic us" data-go="admin" title="Admin">👤</button>`}
+function nav(){const t=tpg(),t2={igrac:"igraci",trener:"treneri",artikal:"shop",vest:"pocetna",utakmica:"kalendar"}[t]||t,u=me(),NL=isAdmin()?links.concat([["admin","Admin panel"]]):links,oc=A.orders.filter(mine).length;
+$("#nv").innerHTML=`<div class="lg" data-go="pocetna">${LG(40)}<div>RADNIČKI<small>NIŠ • 1945</small></div></div><div class="l">${NL.map(l=>`<a data-go="${l[0]}" class="${t2==l[0]?"on":""}">${l[1]}</a>`).join("")}</div><button class="btn" data-tk="1">Kupi ulaznice</button><button class="ic" data-go="nalog" title="Moje porudžbine">🛍${oc?`<i>${oc}</i>`:""}</button><button class="ic us" data-go="nalog" title="${u?esc(u.email):"Prijava / registracija"}">${u?esc((u.ime||"A")[0].toUpperCase()):"👤"}</button><button class="ic hb" data-hb="1" title="Meni">☰</button>`}
 /* FOOTER: društvene mreže, sponzori, kontakt, logo */
 function foot(){$("#ft").innerHTML=`<div><div class="lg">${LG(36)}<div>RADNIČKI<small>NIŠ • 1945</small></div></div><p>Ponos Čaira od 1945.</p></div><div><h4>Društvene mreže</h4><a>Instagram</a><a>Facebook</a><a>YouTube</a><a>TikTok</a></div><div><h4>Sponzori</h4><span class="sp">NIŠ-TEL</span><span class="sp">GRAD NIŠ</span><span class="sp">ČAIR-SPORT</span><span class="sp">NS-BANK</span></div><div><h4>Kontakt</h4>Hala SC Čair, Niš<br>+381 18 000 000<br>info@kkradnicki.rs</div>`}
 /* KUPOVINA ULAZNICA: forma i izbor utakmice */
-function tkm(){if(!tk)return"";const hm=D.matches.filter(m=>m.h&&new Date(m.d+"T19:30")>new Date()),L=hm.length?hm:D.matches.filter(m=>m.h);return `<div class="mdl"><form data-f="tk"><h3 style="margin-top:0">Kupovina ulaznica</h3>${done=="tk"?`<div class="ok2">✔ Porudžbina ulaznica je poslata. Hvala!</div><br><button type="button" class="btn" data-xt="1">Zatvori</button>`:`<label>Utakmica</label><select name="m">${L.map(m=>`<option>Radnički vs ${m.o} — ${dt(m)}, 19:30 • Hala SC Čair</option>`).join("")}</select>${[["Ime","text"],["Prezime","text"],["Email","email"],["Broj telefona","tel"]].map(f=>`<label>${f[0]}</label><input required type="${f[1]}">`).join("")}<label>Broj ulaznica</label><input type="number" min="1" max="10" value="1"><p style="color:var(--mu)">Cena: 500 RSD po ulaznici</p><button class="btn">Kupi</button> <button type="button" class="btn g" data-xt="1">Otkaži</button>`}</form></div>`}
+function tkm(){if(!tk)return"";const hm=D.matches.filter(m=>m.h&&new Date(m.d+"T19:30")>new Date()),L=hm.length?hm:D.matches.filter(m=>m.h);return `<div class="mdl"><form data-f="tk" novalidate><h3 style="margin-top:0">Kupovina ulaznica</h3>${done=="tk"?`<div class="ok2">✔ Ulaznice su sačuvane. ${me()?"Vidite ih na stranici Moj nalog.":"Niste prijavljeni, ali su sačuvane na ovom računaru i vidite ih na stranici Moj nalog."} Hvala!</div><br><button type="button" class="btn" data-go="nalog">Moj nalog</button> <button type="button" class="btn g" data-xt="1">Zatvori</button>`:`<label>Utakmica</label><select name="m">${L.map(m=>`<option>Radnički vs ${m.o} — ${dt(m)}, 19:30 • Hala SC Čair</option>`).join("")}</select>${[["n","Ime","text",pre("ime")],["p","Prezime","text",pre("prezime")],["e","Email","email",pre("email")],["t","Broj telefona","tel",pre("tel")]].map(f=>`<label>${f[1]}</label><input required type="${f[2]}" name="${f[0]}" value="${f[3]}">`).join("")}<label>Broj ulaznica</label><input type="number" min="1" max="10" value="1" name="q"><p style="color:var(--mu)">Cena: 500 RSD po ulaznici</p><button class="btn">Kupi</button> <button type="button" class="btn g" data-xt="1">Otkaži</button>`}</form></div>`}
 /* ZAJEDNIČKO: cena i odbrojavanje */
 const price=p=>p.price.toLocaleString("sr-Latn-RS")+" RSD";
 function cdt(){const e=$("#cd");if(!e)return;let s=Math.max(0,(new Date(nextM().d+"T19:30")-new Date())/1000|0);const v=[s/86400|0,s/3600%24|0,s/60%60|0],l=["DANA","SATI","MIN"];e.innerHTML=v.map((x,i)=>`<div>${String(x).padStart(2,"0")}<small>${l[i]}</small></div>`).join("")}
 /* PRIKAZ I PRELAZAK NA DRUGE STRANICE (svaka stranica je u svom folderu) */
 function render(){const[t,i]=page.split("-");const R={artikal:()=>art(i)};
 $("#mn").innerHTML=(R[t]||R.artikal)()+tkm();nav();foot();cdt()}
-function go(t){const a=t.split("-"),b=a[1];try{localStorage.setItem("kkr_s",JSON.stringify({cart,sel}))}catch(e){}location.href="../"+a[0]+"/index.html"+(b!==undefined?"?id="+b:"")}
+function go(t){const a=t.split("-"),b=a[1];try{localStorage.setItem("kkr_s",JSON.stringify({sel}))}catch(e){}location.href="../"+a[0]+"/index.html"+(b!==undefined?"?id="+b:"")}
 /* STRANICA ARTIKLA: slika, veličine, forma za kupovinu, keš/kartica */
 function art(i){const p=D.products[i];if(!p)return"";const sz=sel[i]||p.sizes.split(",")[0];
-return `<button class="btn g" data-go="shop">← Nazad u shop</button><div class="det" style="margin-top:20px"><div><div class="ph big">${AV(p,"products")}</div><div style="margin-top:14px">${p.sizes.split(",").map(s=>`<span class="sb ${s==sz?"on":""}" data-ps="${s}" data-i="${i}" style="padding:7px 14px">${s}</span>`).join("")}</div></div><div><h1 style="font-size:40px">${p.name}</h1><div class="ac">${price(p)}</div>${p.stock?"":`<div class="oos">Out of stock</div>`}<form class="fm" data-f="kup"><div class="card" style="margin-top:14px"><b>Forma za kupovinu</b>${[["Ime i prezime","text"],["Email","email"],["Broj telefona","tel"],["Adresa","text"],["Grad, poštanski broj","text"]].map(f=>`<label>${f[0]}</label><input required type="${f[1]}">`).join("")}<label>Način plaćanja</label><label style="color:var(--tx)"><input type="radio" name="pl" checked> Keš</label><label style="color:var(--tx)"><input type="radio" name="pl"> Kartica</label></div><br><button class="btn" ${p.stock?"":"disabled"}>Kupi</button></form>${done=="kup"?`<div class="ok2">✔ Porudžbina je poslata (${sz}). Hvala!</div>`:""}</div></div>`}
+return `<button class="btn g" data-go="shop">← Nazad u shop</button><div class="det" style="margin-top:20px"><div><div class="ph big">${AV(p,"products")}</div><div style="margin-top:14px">${p.sizes.split(",").map(s=>`<span class="sb ${s==sz?"on":""}" data-ps="${s}" data-i="${i}" style="padding:7px 14px">${s}</span>`).join("")}</div></div><div><h1 style="font-size:40px">${p.name}</h1><div class="ac">${price(p)}</div>${p.stock?"":`<div class="oos">Out of stock</div>`}<form class="fm" data-f="kup" data-i="${i}" novalidate><div class="card" style="margin-top:14px"><b>Forma za kupovinu</b>${[["n","Ime i prezime","text",(pre("ime")+" "+pre("prezime")).trim()],["e","Email","email",pre("email")],["t","Broj telefona","tel",pre("tel")],["a","Adresa","text",""],["g","Grad, poštanski broj","text",""]].map(f=>`<label>${f[1]}</label><input required type="${f[2]}" name="${f[0]}" value="${f[3]}">`).join("")}<label>Način plaćanja</label><label style="color:var(--tx)"><input type="radio" name="pl" value="Keš" checked> Keš</label><label style="color:var(--tx)"><input type="radio" name="pl" value="Kartica"> Kartica</label><div class="kf" style="display:none"><label>Broj kartice</label><input name="cn" inputmode="numeric" autocomplete="off" placeholder="1234 5678 9012 3456"><label>Ime na kartici</label><input name="cm" autocomplete="off"><label>Datum isteka (MM/GG)</label><input name="ce" placeholder="MM/GG" autocomplete="off"><label>CVV</label><input name="cc" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div></div><br><button class="btn" ${p.stock?"":"disabled"}>Kupi</button></form>${done=="kup"?`<div class="ok2">✔ Porudžbina je poslata (${sz}). Hvala!</div>`:""}</div></div>`}
 /* DOGAĐAJI: skrolovanje redova mišem, klikovi, slanje formi */
 let drag=0,sx,sl,rw;
 document.addEventListener("mousedown",e=>{rw=e.target.closest(".rw");if(rw){drag=1;sx=e.pageX;sl=rw.scrollLeft;rw._m=0}});
@@ -55,25 +94,30 @@ document.addEventListener("mousemove",e=>{if(drag&&rw){const d=e.pageX-sx;if(Mat
 document.addEventListener("mouseup",()=>{drag=0});
 document.addEventListener("click",e=>{const t=e.target,r=t.closest(".rw");if(r&&r._m){r._m=0;e.preventDefault();return}
 const q=a=>t.closest("["+a+"]");let x;
-if(x=q("data-add")){const i=x.dataset.add;cart++;go("artikal-"+i);return}
+if(x=q("data-add")){const i=x.dataset.add;go("artikal-"+i);return}
 if(x=t.closest("[data-sz]")){const c=t.closest(".pc");sel[c.dataset.i]=x.dataset.sz;c.classList.add("ok");c.querySelectorAll(".sb").forEach(b=>b.classList.toggle("on",b==x));return}
 if(x=q("data-ps")){sel[x.dataset.i]=x.dataset.ps;render();return}
+if(q("data-hb")){$("#nv .l").classList.toggle("open");return}
+if(x=q("data-nt")){ntab=x.dataset.nt;render();return}
+if(q("data-logout")){try{localStorage.removeItem("kkr_u")}catch(e){}go("pocetna");return}
 if(q("data-tk")){tk=1;done="";render();return}
 if(q("data-xt")){tk=0;done="";render();return}
 if(x=q("data-go")){go(x.dataset.go);return}
 if(x=q("data-m")){mo[1]+=+x.dataset.m;if(mo[1]<0){mo[1]=11;mo[0]--}if(mo[1]>11){mo[1]=0;mo[0]++}render();return}
 if(x=q("data-ad")){adm=x.dataset.ad;ed=null;render();return}
 if(x=q("data-ed")){ed=+x.dataset.ed;render();return}
-if(x=q("data-del")){D[adm].splice(+x.dataset.del,1);save();render();return}
+if(x=q("data-del")){if(D[adm]){D[adm].splice(+x.dataset.del,1);save()}else{A[adm].splice(+x.dataset.del,1);saveA()}render();return}
 if(q("data-x")){ed=null;render()}});
+document.addEventListener("change",e=>{if(e.target.name=="pl"){const k=$(".kf");if(k)k.style.display=e.target.value=="Kartica"?"block":"none"}});
 document.addEventListener("submit",e=>{e.preventDefault();const f=e.target.dataset.f;
 if(f=="ed"){const o={},fl=e.target.elements._f.files[0];new FormData(e.target).forEach((v,k)=>{if(k!="_f")o[k]=["price","stock","num","titles","years"].includes(k)?+v:v});
 const fin=()=>{ed<0?D[adm].push(o):Object.assign(D[adm][ed],o);ed=null;save();render()};
 if(!fl){fin();return}
 const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,480/im.width),c=document.createElement("canvas");c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);o.img=c.toDataURL("image/jpeg",.8);fin()};im.src=r.result};r.readAsDataURL(fl);return}
+if(FORMS[f]){FORMS[f](e.target);return}
 done=f;render()});
 /* START: Stranica artikla */
-try{const s=JSON.parse(localStorage.getItem("kkr_s")||"{}");cart=s.cart||0;sel=s.sel||{}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem("kkr_s")||"{}");sel=s.sel||{}}catch(e){}
 setInterval(cdt,30000);
 const _id=new URLSearchParams(location.search).get("id");
 page="artikal"+"-"+(_id||0);
