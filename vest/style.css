@@ -50,3 +50,7 @@ footer{border-top:1px solid var(--ln);background:#08090c;padding:34px 28px;displ
 .sp{display:inline-block;background:#1c1f27;border-radius:8px;padding:8px 12px;margin:3px;font-weight:800;color:#cbc}
 @media(max-width:900px){.g5{grid-template-columns:repeat(3,1fr)}.hero,.det,.sk{grid-template-columns:1fr}.mr{grid-template-columns:1fr 1fr}footer{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr}.det .nm{flex-direction:column}}
 @media(max-width:520px){.g5{grid-template-columns:repeat(2,1fr)}.adm{grid-template-columns:1fr}.adm .tp{grid-column:1}nav{padding:10px 14px}.cl{min-height:64px;font-size:10px}.cl span{display:none}}
+.er{color:#ff8a8a;font-size:12px;margin-top:4px}
+.hb{display:none}
+@media(max-width:900px){nav{flex-wrap:wrap;overflow:visible;gap:10px 14px}nav>.btn{margin-left:auto}.hb{display:inline-block}nav .l{display:none;order:9;width:100%;flex-direction:column;gap:0;margin:0}nav .l.open{display:flex}nav .l a{padding:12px 4px;border-top:1px solid var(--ln)}nav .l a.on{font-size:13px}}
+form .btn{margin-top:16px}
